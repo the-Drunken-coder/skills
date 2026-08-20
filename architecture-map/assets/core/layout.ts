@@ -153,6 +153,11 @@ export function packLayout<T>(
   inputs: LayoutInput<T>[],
   groupOrder: readonly string[],
 ): Map<T, Footprint> {
+  const knownGroups = new Set(groupOrder)
+  const unknownGroups = [...new Set(inputs.map((input) => input.group).filter((group) => !knownGroups.has(group)))]
+  if (unknownGroups.length > 0) {
+    throw new Error(`Layout inputs reference unknown groups: ${unknownGroups.join(', ')}`)
+  }
   const districts = groupOrder
     .map((group) => inputs.filter((i) => i.group === group))
     .filter((members) => members.length > 0)
