@@ -102,11 +102,23 @@ export default function EdgeLayer({
               fill="none"
               stroke="transparent"
               strokeWidth={12}
+              tabIndex={0}
+              role="button"
+              aria-label={edge.label}
+              aria-pressed={selection?.kind === 'edge' && selection.id === edge.id}
               style={{ cursor: 'pointer' }}
               onClick={(e) => {
                 e.stopPropagation()
                 onSelect(edge.id)
               }}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter' && e.key !== ' ') return
+                e.preventDefault()
+                e.stopPropagation()
+                onSelect(edge.id)
+              }}
+              onFocus={() => onHover(edge.id)}
+              onBlur={() => onHover(null)}
               onPointerEnter={() => onHover(edge.id)}
               onPointerLeave={() => onHover(null)}
             >

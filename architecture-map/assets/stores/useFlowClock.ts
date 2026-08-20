@@ -109,7 +109,13 @@ export function pauseClock(): void {
 }
 
 export function resumeClock(): void {
-  if (!program || prefersReducedMotion()) return
+  if (!program) return
+  if (prefersReducedMotion()) {
+    cancelStep()
+    timeMs = nextBoundary(program, timeMs)
+    notify()
+    return
+  }
   playing = true
   cancelStep()
   startLoop()
