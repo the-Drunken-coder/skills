@@ -175,14 +175,18 @@ export function ExplainerPanel({
 
   const node = selection?.kind === 'node' ? nodes.find((n) => n.id === selection.id) : undefined
   const edge = selection?.kind === 'edge' ? edges.find((e) => e.id === selection.id) : undefined
+  const edgeFrom = edge ? nodes.find((node) => node.id === edge.from)?.name : undefined
+  const edgeTo = edge ? nodes.find((node) => node.id === edge.to)?.name : undefined
 
   const title = node?.name ?? (edge ? edge.label : intro.title)
   const lede = node
-    ? node.loc
+    ? node.count !== undefined && node.loc !== undefined
       ? `${node.count} files · ~${node.loc.toLocaleString('en-US')} lines`
       : undefined
     : edge
-      ? `${nodes.find((n) => n.id === edge.from)?.name} → ${nodes.find((n) => n.id === edge.to)?.name}`
+      ? edgeFrom && edgeTo
+        ? `${edgeFrom} → ${edgeTo}`
+        : edgeFrom ?? edgeTo
       : intro.lede
   const what = node?.whatItDoes ?? (edge ? `A ${edge.kind} path. ${edge.label}.` : intro.whatItDoes)
   const how = node?.howItsBuilt ?? intro.howItsBuilt
