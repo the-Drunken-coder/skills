@@ -1,7 +1,8 @@
 # Mounting the map
 
 The map is one default-exported React component taking one `ArchitectureData`
-prop. Everything below is about getting a route to render it.
+prop. The host app must use React 19.2 or newer. Everything below is about
+getting a route to render it.
 
 ## Next.js — App Router
 
