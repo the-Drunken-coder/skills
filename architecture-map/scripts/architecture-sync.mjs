@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { globSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, globSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 /**
@@ -25,8 +26,9 @@ import { pathToFileURL } from 'node:url'
  * Run it, or `--check` to verify without writing (the mode CI cares about).
  */
 
-const ROOT = process.env.ARCH_ROOT ?? process.cwd() + '/'
+const ROOT = resolve(process.env.ARCH_ROOT ?? process.cwd())
 const CONFIG = 'architecture.config.json'
+const URL_SCHEME = /^[a-zA-Z][a-zA-Z\d+.-]*:/
 
 /** Defaults for a JS/TS repo; `architecture.config.json` overrides them. */
 const DEFAULTS = {
@@ -36,11 +38,45 @@ const DEFAULTS = {
   ignore: ['next-env.d.ts'],
 }
 
-function loadConfig() {
+function directoryUrl(root) {
+  return pathToFileURL(`${resolve(root)}${sep}`)
+}
+
+function isWithin(root, candidate) {
+  const path = relative(root, candidate)
+  return path === '' || (!isAbsolute(path) && path !== '..' && !path.startsWith(`..${sep}`))
+}
+
+function resolveInsideRoot(root, value, field) {
+  if (typeof value !== 'string' || !value.trim() || value.includes('\0')) {
+    throw new Error(`${field} must be a non-empty relative path`)
+  }
+  if (isAbsolute(value) || URL_SCHEME.test(value)) {
+    throw new Error(`${field} must be a relative path inside the repository`)
+  }
+
+  const rootReal = realpathSync(root)
+  const candidate = resolve(root, value)
+  if (!isWithin(root, candidate)) {
+    throw new Error(`${field} must stay inside the repository`)
+  }
+
+  const parentReal = realpathSync(dirname(candidate))
+  if (!isWithin(rootReal, parentReal)) {
+    throw new Error(`${field} resolves through a directory outside the repository`)
+  }
+  if (existsSync(candidate) && !isWithin(rootReal, realpathSync(candidate))) {
+    throw new Error(`${field} resolves to a file outside the repository`)
+  }
+  return candidate
+}
+
+function loadConfig(root = ROOT) {
   try {
-    return { ...DEFAULTS, ...JSON.parse(readFileSync(new URL(CONFIG, `file://${ROOT}`), 'utf8')) }
-  } catch {
-    return DEFAULTS
+    return { ...DEFAULTS, ...JSON.parse(readFileSync(new URL(CONFIG, directoryUrl(root)), 'utf8')) }
+  } catch (error) {
+    if (error?.code === 'ENOENT') return DEFAULTS
+    throw error
   }
 }
 
@@ -66,12 +102,12 @@ function claimants(coverage) {
   return claims
 }
 
-export function measure(root = ROOT, config = loadConfig()) {
-  // A base without a trailing slash resolves relative paths against its
-  // *parent*, which silently reads the wrong tree.
-  const base = `file://${root.endsWith('/') ? root : `${root}/`}`
-  const cwd = { cwd: root }
-  const coverage = JSON.parse(readFileSync(new URL(config.coverage, base), 'utf8'))
+export function measure(root = ROOT, config = loadConfig(root)) {
+  const resolvedRoot = resolve(root)
+  const base = directoryUrl(resolvedRoot)
+  const cwd = { cwd: resolvedRoot }
+  const coveragePath = resolveInsideRoot(resolvedRoot, config.coverage, 'coverage')
+  const coverage = JSON.parse(readFileSync(coveragePath, 'utf8'))
   const claims = claimants(coverage)
   const ignore = [...config.ignore, config.output].map(
     (p) => new RegExp(`^${p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`),
@@ -145,7 +181,7 @@ function main() {
   const config = loadConfig()
   const result = measure(ROOT, config)
   const next = render(result)
-  const outPath = new URL(config.output, `file://${ROOT}`)
+  const outPath = resolveInsideRoot(ROOT, config.output, 'output')
   const previous = (() => {
     try {
       return readFileSync(outPath, 'utf8')
