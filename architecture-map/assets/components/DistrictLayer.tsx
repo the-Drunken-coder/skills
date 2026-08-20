@@ -101,11 +101,13 @@ export function DistrictFlags({
             opacity={isLit ? 1 : flowLit ? 0.4 : 0.9}
           >
             <ellipse cx={0} cy={0} rx={3.5} ry={1.75} fill={ink} />
-            {/* A rect, not a line: x/y/width/height are the SVG geometry
-                properties CSS can actually transition. */}
+            {/* The attributes keep the pole visible without CSS geometry;
+                supporting browsers use the matching style values to animate. */}
             <rect
               x={-0.75}
+              y={-poleH}
               width={1.5}
+              height={poleH}
               fill={ink}
               style={{
                 y: `${-poleH}px`,
