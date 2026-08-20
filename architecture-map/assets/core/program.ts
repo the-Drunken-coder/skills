@@ -214,10 +214,13 @@ export function edgeTenses(
   beatIndex: number,
 ): ReadonlyMap<string, EdgeTense> {
   const tenses = new Map<string, EdgeTense>()
+  const priority: Record<EdgeTense, number> = { upcoming: 0, visited: 1, current: 2 }
   if (!program || beatIndex < 0) return tenses
   program.beats.forEach((beat, i) => {
     if (beat.kind !== 'travel') return
-    tenses.set(beat.edgeId, i === beatIndex ? 'current' : i < beatIndex ? 'visited' : 'upcoming')
+    const tense = i === beatIndex ? 'current' : i < beatIndex ? 'visited' : 'upcoming'
+    const existing = tenses.get(beat.edgeId)
+    if (!existing || priority[tense] > priority[existing]) tenses.set(beat.edgeId, tense)
   })
   return tenses
 }

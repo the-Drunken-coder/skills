@@ -144,7 +144,7 @@ export function FlowChoreography({
         const mid = geom.pts[Math.floor(geom.pts.length / 2)]
         const done = i < beatIndex
         return (
-          <g key={beat.edgeId} opacity={done || i === beatIndex ? 1 : 0.45}>
+          <g key={`${beat.edgeId}-${i}`} opacity={done || i === beatIndex ? 1 : 0.45}>
             <circle
               cx={mid.x}
               cy={mid.y}
