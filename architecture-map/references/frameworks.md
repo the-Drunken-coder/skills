@@ -52,12 +52,14 @@ graph module directly — it is static data, so no loader is needed.
 
 ## Astro
 
-Wrap in a client island, because the map is fully interactive:
+Create `src/pages/~/architecture.astro` and wrap the map in a client island,
+because the map is fully interactive:
 
 ```astro
 ---
-import ArchitectureMap from '../architecture/components/ArchitectureMap'
-import { ARCHITECTURE } from '../architecture/graph'
+import ArchitectureMap from '../../architecture/components/ArchitectureMap'
+import '../../architecture/components/keyframes.css'
+import { ARCHITECTURE } from '../../architecture/graph'
 ---
 <ArchitectureMap client:only="react" data={ARCHITECTURE} />
 ```
