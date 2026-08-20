@@ -167,7 +167,7 @@ function main() {
       console.error(`${config.output} is stale. Run the architecture sync.`)
       process.exit(1)
     }
-    console.log('architecture — up to date')
+    if (result.unclaimed.length === 0) console.log('architecture — up to date')
   } else if (previous !== next) {
     writeFileSync(outPath, next)
     console.log(`architecture — updated ${config.output}`)
@@ -180,6 +180,7 @@ function main() {
     for (const file of result.unclaimed.slice(0, 40)) console.log(`  ${file}`)
     if (result.unclaimed.length > 40) console.log(`  … and ${result.unclaimed.length - 40} more`)
     console.log(`Give a module a wider pattern in ${config.coverage}, or add a node for it.`)
+    if (process.argv.includes('--check')) process.exit(1)
   }
 }
 
