@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import type { ArchEdge, ArchFlow, ArchNode, Group } from '../core/types'
 import { select, setActiveFlow, setHoverGroup, useMapView } from '../stores/useMapView'
 import { paint, type as typeface } from './theme'
@@ -37,16 +37,28 @@ export function LegendRail({
 }) {
   const { selection, hover, hoverGroup, activeFlowId } = useMapView()
   const selectedId = selection?.kind === 'node' ? selection.id : null
+  const railRef = useRef<HTMLElement>(null)
+  const stickyRef = useRef<HTMLDivElement>(null)
 
   // A selection made on the canvas may live below this rail's fold; bring its
   // chip into view so both surfaces always visibly agree.
   useEffect(() => {
     if (!selectedId) return
-    document.getElementById(`am-rail-${selectedId}`)?.scrollIntoView({ block: 'nearest' })
+    const rail = railRef.current
+    const sticky = stickyRef.current
+    const item = document.getElementById(`am-rail-${selectedId}`)
+    if (!rail || !sticky || !item) return
+
+    const railBox = rail.getBoundingClientRect()
+    const stickyBottom = sticky.getBoundingClientRect().bottom
+    const itemBox = item.getBoundingClientRect()
+    if (itemBox.top < stickyBottom) rail.scrollTop += itemBox.top - stickyBottom - 8
+    else if (itemBox.bottom > railBox.bottom) rail.scrollTop += itemBox.bottom - railBox.bottom + 8
   }, [selectedId])
 
   return (
     <aside
+      ref={railRef}
       style={{
         width: 224,
         flexShrink: 0,
@@ -55,7 +67,7 @@ export function LegendRail({
         background: paint.surface,
       }}
     >
-      <div style={{ position: 'sticky', top: 0, background: paint.surface, padding: '20px 16px 16px', zIndex: 1 }}>
+      <div ref={stickyRef} style={{ position: 'sticky', top: 0, background: paint.surface, padding: '20px 16px 16px', zIndex: 1 }}>
         <p style={LABEL}>Flows</p>
         <ul style={{ listStyle: 'none', margin: '8px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {flows.map((flow) => {
