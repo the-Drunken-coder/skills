@@ -42,7 +42,7 @@ test('loads config when ARCH_ROOT has no trailing separator', (t) => {
   const result = run(root)
 
   assert.equal(result.status, 0, result.stderr)
-  assert.match(readFileSync(join(root, 'src/measured.generated.ts'), 'utf8'), /'app'/)
+  assert.match(readFileSync(join(root, 'src/measured.generated.ts'), 'utf8'), /["']app["']: \{ count: 1,/)
 })
 
 test('rejects output paths outside the repository', (t) => {
