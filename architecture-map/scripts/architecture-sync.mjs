@@ -55,11 +55,20 @@ function specificity(pattern) {
 }
 
 function claimants(coverage) {
+  if (!coverage || typeof coverage !== 'object' || Array.isArray(coverage)) {
+    throw new Error('coverage must be an object keyed by architecture node id')
+  }
   const claims = []
   for (const [nodeId, entry] of Object.entries(coverage)) {
     // `$`-prefixed keys are notes to humans, not modules.
     if (nodeId.startsWith('$')) continue
+    if (!entry || typeof entry !== 'object' || !Array.isArray(entry.owns)) {
+      throw new Error(`coverage entry "${nodeId}" must define an owns array`)
+    }
     for (const pattern of entry.owns) {
+      if (typeof pattern !== 'string' || pattern.length === 0) {
+        throw new Error(`coverage entry "${nodeId}" contains an invalid owns pattern`)
+      }
       claims.push({ nodeId, pattern, priority: entry.priority ?? 0, weight: specificity(pattern) })
     }
   }
