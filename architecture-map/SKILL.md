@@ -83,8 +83,11 @@ work uninterrupted. Do not drip-feed them one at a time.
 ## Step 3 — Install the core
 
 Copy `$SKILL_DIR/assets/core/`, `assets/stores/` and `assets/components/` into
-the repo under the path you agreed (e.g. `src/architecture/`). These are dependency-free
-apart from React, and typecheck under `strict`.
+the repo under the path you agreed (e.g. `src/architecture/`). The components
+require React 19.2 or newer because they use `useEffectEvent`. The scripts
+require Node.js 22 or newer because they use the built-in `node:fs` glob API.
+Beyond React, the components have no runtime dependencies and typecheck under
+`strict`.
 
 Then write `architecture.config.json` at the repo root:
 
