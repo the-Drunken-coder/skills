@@ -27,6 +27,10 @@ const flag = (name, fallback) => {
 
 const ROOT = flag('root', process.cwd())
 const TARGET = Number(flag('target', 22))
+if (!Number.isInteger(TARGET) || TARGET < 1) {
+  console.error('--target must be a positive integer')
+  process.exit(1)
+}
 const SOURCES = ['**/*.{ts,tsx,js,jsx,mjs,cjs,py,go,rb,rs,java,kt,swift,php,cs}']
 const SKIP = /(^|\/)(node_modules|\.git|dist|build|out|\.next|vendor|target|__pycache__|coverage)(\/|$)/
 
@@ -41,17 +45,18 @@ function lines(file) {
 const files = [...new Set(SOURCES.flatMap((g) => globSync(g, { cwd: ROOT })))]
   .map((f) => f.split('\\').join('/'))
   .filter((f) => !SKIP.test(f))
+const locByFile = new Map(files.map((file) => [file, lines(file)]))
 
 /** Group by directory, at increasing depth, until the count fits the target. */
 function clusterAt(depth) {
   const groups = new Map()
   for (const file of files) {
     const parts = file.split('/')
-    const key = parts.slice(0, Math.min(depth, Math.max(parts.length - 1, 1))).join('/') || '.'
+    const key = parts.length === 1 ? '.' : parts.slice(0, Math.min(depth, parts.length - 1)).join('/')
     const entry = groups.get(key) ?? { dir: key, count: 0, loc: 0, files: [] }
     entry.count += 1
-    entry.loc += lines(file)
-    if (entry.files.length < 6) entry.files.push(file)
+    entry.loc += locByFile.get(file) ?? 0
+    entry.files.push(file)
     groups.set(key, entry)
   }
   return [...groups.values()].sort((a, b) => b.loc - a.loc)
@@ -65,28 +70,58 @@ for (let depth = 2; depth <= 4; depth++) {
   best = next
 }
 
-// Fold the tail: everything past the target collapses into its parent
-// directory, so the drawing stays readable and the partition stays total.
-const kept = best.slice(0, TARGET)
-const folded = best.slice(TARGET)
-const byParent = new Map()
-for (const entry of folded) {
-  const parent = entry.dir.split('/').slice(0, -1).join('/') || '.'
-  const bucket = byParent.get(parent) ?? { dir: parent, count: 0, loc: 0, files: [], aggregated: true }
-  bucket.count += entry.count
-  bucket.loc += entry.loc
-  byParent.set(parent, bucket)
+function parentOf(dir) {
+  if (dir === '.') return '.'
+  const parts = dir.split('/')
+  return parts.length === 1 ? '.' : parts.slice(0, -1).join('/')
 }
 
-const proposal = [...kept, ...byParent.values()].map((entry) => ({
-  id: entry.dir.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'root',
-  dir: entry.dir,
-  owns: [entry.dir === '.' ? '*' : `${entry.dir}/**`],
-  count: entry.count,
-  loc: entry.loc,
-  sampleFiles: entry.files ?? [],
-  aggregated: Boolean(entry.aggregated),
-}))
+function contains(parent, dir) {
+  return parent === '.' || dir === parent || dir.startsWith(`${parent}/`)
+}
+
+// Collapse the smallest branch into the nearest ancestor that combines at
+// least two entries. Each replacement reduces the count, so the target is a
+// hard cap rather than the point where extra parent buckets start accumulating.
+while (best.length > TARGET) {
+  best.sort((a, b) => b.loc - a.loc)
+  const smallest = best[best.length - 1]
+  let parent = parentOf(smallest.dir)
+  let members = best.filter((entry) => contains(parent, entry.dir))
+  while (members.length < 2 && parent !== '.') {
+    parent = parentOf(parent)
+    members = best.filter((entry) => contains(parent, entry.dir))
+  }
+
+  const memberSet = new Set(members)
+  const folded = {
+    dir: parent,
+    count: members.reduce((sum, entry) => sum + entry.count, 0),
+    loc: members.reduce((sum, entry) => sum + entry.loc, 0),
+    files: members.flatMap((entry) => entry.files),
+    aggregated: true,
+  }
+  best = [...best.filter((entry) => !memberSet.has(entry)), folded]
+}
+
+best.sort((a, b) => b.loc - a.loc)
+const idCounts = new Map()
+const proposal = best.map((entry) => {
+  const baseId = entry.dir.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'root'
+  const occurrence = (idCounts.get(baseId) ?? 0) + 1
+  idCounts.set(baseId, occurrence)
+  const hasDescendant = best.some((other) => other !== entry && contains(entry.dir, other.dir))
+
+  return {
+    id: occurrence === 1 ? baseId : `${baseId}-${occurrence}`,
+    dir: entry.dir,
+    owns: entry.dir === '.' || hasDescendant ? entry.files : [`${entry.dir}/**`],
+    count: entry.count,
+    loc: entry.loc,
+    sampleFiles: entry.files.slice(0, 6),
+    aggregated: Boolean(entry.aggregated),
+  }
+})
 
 console.log(
   JSON.stringify(
