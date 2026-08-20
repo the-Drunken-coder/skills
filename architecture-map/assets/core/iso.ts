@@ -84,6 +84,8 @@ export function polylineLengths(pts: ScreenPt[]): { total: number; cum: number[]
 
 /** The point `len` px along the polyline, clamped to its ends. */
 export function pointAtLength(pts: ScreenPt[], cum: number[], len: number): ScreenPt {
+  if (pts.length === 0) return { x: 0, y: 0 }
+  if (pts.length === 1) return pts[0]
   const total = cum[cum.length - 1]
   const at = Math.max(0, Math.min(len, total))
   let i = 1
@@ -115,6 +117,9 @@ export function sceneBounds(
   items: { footprint: Footprint; height: number }[],
   margin = 48,
 ): { x: number; y: number; width: number; height: number } {
+  if (items.length === 0) {
+    return { x: -margin, y: -margin, width: margin * 2, height: margin * 2 }
+  }
   let minX = Infinity
   let minY = Infinity
   let maxX = -Infinity
