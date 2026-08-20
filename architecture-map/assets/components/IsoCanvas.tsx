@@ -74,8 +74,13 @@ export default function IsoCanvas({
 
   // A neighborhood lights when it is pointed at, or when the thing being
   // pointed at lives there — so rail and floor always agree.
+  const hoveredNodeGroup =
+    view.hover?.kind === 'node'
+      ? (nodes.find((node) => node.id === view.hover?.id)?.group ?? null)
+      : null
   const litGroup =
     view.hoverGroup ??
+    hoveredNodeGroup ??
     (view.selection?.kind === 'node'
       ? (nodes.find((n) => n.id === view.selection?.id)?.group ?? null)
       : null)
