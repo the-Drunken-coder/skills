@@ -49,7 +49,7 @@ Answer these from the repo. Do not ask.
 Then run the proposer to get a first read of the shape. It lives beside this
 file, not in the repo you are mapping, so resolve its path first:
 
-> **`SKILL_DIR`** — the absolute path of the directory containing *this
+> **`<SKILL_DIR>`** — the absolute path of the directory containing *this
 > SKILL.md*, which your harness reported when it loaded this file. It differs
 > per tool (`~/.claude/skills/architecture-map`,
 > `~/.codex/skills/architecture-map`, `~/.agents/skills/architecture-map`, a
@@ -57,7 +57,7 @@ file, not in the repo you are mapping, so resolve its path first:
 > path; do not rely on an environment variable.
 
 ```bash
-node "$SKILL_DIR/scripts/propose-coverage.mjs" --root . --target 22
+node "/absolute/path/to/architecture-map/scripts/propose-coverage.mjs" --root . --target 22
 ```
 
 It returns directory clusters with file counts and line totals, plus suggested
@@ -82,7 +82,8 @@ work uninterrupted. Do not drip-feed them one at a time.
 
 ## Step 3 — Install the core
 
-Copy `$SKILL_DIR/assets/core/`, `assets/stores/` and `assets/components/` into
+Copy `<SKILL_DIR>/assets/core/`, `<SKILL_DIR>/assets/stores/` and
+`<SKILL_DIR>/assets/components/` into
 the repo under the path you agreed (e.g. `src/architecture/`). These are dependency-free
 apart from React, and typecheck under `strict`.
 
@@ -97,7 +98,7 @@ Then write `architecture.config.json` at the repo root:
 }
 ```
 
-Copy `$SKILL_DIR/scripts/architecture-sync.mjs` into the repo's own `scripts/`
+Copy `<SKILL_DIR>/scripts/architecture-sync.mjs` into the repo's own `scripts/`
 and add
 `"architecture:sync": "node scripts/architecture-sync.mjs"`.
 
